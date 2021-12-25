@@ -61,8 +61,9 @@ output (Matrix *m)
 }
 
 void
-set (Matrix **m, size_t row, size_t col)
+set (Matrix **m, size_t size, size_t col, size_t row)
 {
+
 	(*m)->v[row][col] = 1;
 }
 
@@ -70,32 +71,36 @@ int
 main(void) 
 {
 	Matrix *m = create(HEIGHT, WIDTH);
-	size_t r = 0;
-	size_t c = 0;
+	size_t x = 0;
+	size_t y = 0;
+	size_t s = 1;
 	char k;
 
 	while (1) 
 	{
 		k = getchar();
+		size_t aux = x;
 
 		switch (k) 
 		{
-			case 'a': c = c > 0 ? --c : WIDTH - 1; break;
-			case 's': r = r == HEIGHT - 1 ? 0 : ++r; break;
-			case 'd': c = c == WIDTH - 1 ? 0 : ++c; break;
-			case 'w': r = r > 0 ? --r : HEIGHT - 1; break; 
+			case 'a': x = x > 0 ? --x : WIDTH - 1; break;
+			case 's': y = y == HEIGHT - 1 ? 0 : ++y; break;
+			case 'd': x = x == WIDTH - 1 ? 0 : ++x; break;
+			case 'w': y = y > 0 ? --y : HEIGHT - 1; break; 
+			default: break;
 		}
-
-		size_t aux;
-		if ()
-
-
-		for () 
+		
+		for (;;)
 		{
 			system("clear");
-			set(&m, r, c);
+			aux == x ? y++ : x++;
+			if (x == WIDTH-1) x = 0;
+			if (y == HEIGHT-1) y = 0;
+			set (&m, s, x, y);
 			output(m);
 		}
+
 	}
 
 	return 0;
+}
