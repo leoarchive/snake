@@ -31,12 +31,66 @@ struct matrix
 	uint8_t **v;
 };
 
+typedef struct list List;
+
+struct list 
+{
+ 	uint16_t x;
+	uint16_t y;
+	List *n;
+	List *b;
+};
+
+List * 
+create_list (void)
+{
+	List * l = (List *) malloc(sizeof(List));
+	l->x = l->y = 0;
+	l->n = l->b = NULL;
+	return l;
+}
+
+void insert(List ** l, uint16_t x, uint16_t y)
+{
+	List * n = (List *) malloc(sizeof(List));
+	n->x = x;
+	n->y = y;
+	(*l)->n = n;
+	n->b = (*l);
+	n->n = NULL;
+	(*l) = n;
+}
+
+void 
+set_snake_size(List **l, size_t size) 
+{
+	if (!(*l)) return;
+	for (size_t i = 0; i < size; ++i)
+	{
+		(*l) = (*l)->b;
+	}
+	if ((*l)) (*l) = (*l)->b;
+	while ((*l))
+	{
+		(*l) = (*l)->b;
+		free((*l)->n);
+		
+	}
+}
+
+void
+output_list (List *l)
+{
+	if (!l) return;
+	printf("x: %d y: %d\n", l->x, l->y);
+	output_list (l->b);
+}
+
 Matrix *
-create (uint16_t row, uint16_t col)
+create_matrix (uint16_t row, uint16_t col)
 {
 	Matrix *m = (Matrix *)malloc (sizeof (Matrix));
-	if (!m)
-		exit (EXIT_FAILURE);
+	if (!m) exit (EXIT_FAILURE);
 	m->row = row;
 	m->col = col;
 	m->v = (uint8_t **)malloc (row * sizeof (uint8_t *));
@@ -61,45 +115,41 @@ output (Matrix *m)
 }
 
 void
-set (Matrix **m, size_t size, size_t col, size_t row)
+set (Matrix **m, List * l)
 {
-
-	(*m)->v[row][col] = 1;
+	if (!l) return;
+	(*m)->v[l->y][l->x] = 1;
+	set (m,l->b);
 }
 
 int 
 main(void) 
 {
-	Matrix *m = create(HEIGHT, WIDTH);
+	Matrix *m = create_matrix (HEIGHT, WIDTH);
+	List * l = create_list ();
 	size_t x = 0;
 	size_t y = 0;
-	size_t s = 1;
+	size_t s = 0;
 	char k;
 
 	while (1) 
 	{
 		k = getchar();
-		size_t aux = x;
 
 		switch (k) 
 		{
-			case 'a': x = x > 0 ? --x : WIDTH - 1; break;
-			case 's': y = y == HEIGHT - 1 ? 0 : ++y; break;
-			case 'd': x = x == WIDTH - 1 ? 0 : ++x; break;
-			case 'w': y = y > 0 ? --y : HEIGHT - 1; break; 
+			case 'a': x = x > 0 ? --x : WIDTH; break;
+			case 's': y = y == HEIGHT ? 0 : ++y; break;
+			case 'd': x = x == WIDTH ? 0 : ++x; break;
+			case 'w': y = y > 0 ? --y : HEIGHT; break; 
 			default: break;
 		}
-		
-		for (;;)
-		{
-			system("clear");
-			aux == x ? y++ : x++;
-			if (x == WIDTH-1) x = 0;
-			if (y == HEIGHT-1) y = 0;
-			set (&m, s, x, y);
-			output(m);
-		}
-
+		set_snake_size(&l, s);
+		system("clear");
+		insert (&l, x, y);
+		set (&m, l);
+		output_list (l);
+		output(m);
 	}
 
 	return 0;
