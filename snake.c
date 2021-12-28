@@ -18,138 +18,168 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <time.h>
 
 #define HEIGHT 20
 #define WIDTH 100
 
-typedef struct matrix Matrix;
+typedef struct screen Screen;
 
-struct matrix
+struct screen
 {
-	uint16_t row;
-	uint16_t col;
+	size_t row;
+	size_t col;
 	uint8_t **v;
+};
+
+typedef struct node Node;
+
+struct node 
+{
+ 	size_t x;
+	size_t y;
+	Node *next;
 };
 
 typedef struct list List;
 
-struct list 
+struct list
 {
- 	uint16_t x;
-	uint16_t y;
-	List *n;
-	List *b;
+	Node *n;
+	Node *head;
 };
 
-List * 
-create_list (void)
+typedef struct snake Snake;
+
+struct snake
 {
-	List * l = (List *) malloc(sizeof(List));
-	l->x = l->y = 0;
-	l->n = l->b = NULL;
-	return l;
+	List *m;
+	Screen *scn;
+	size_t s;
+	size_t x;
+	size_t y;
+};
+
+Snake *
+create (size_t h, size_t w)
+{
+	Snake * s = (Snake *) malloc(sizeof(Snake));
+	if (!s) exit (EXIT_FAILURE);
+	s->s = s->x = s->y = 0;
+	s->m = (List *) malloc(sizeof (List));
+	if (!s->m) exit(EXIT_FAILURE);
+	s->m->n = (Node *) malloc(sizeof (Node));
+	if (!s->m->n) exit(EXIT_FAILURE);
+	s->m->head = s->m->n;
+	s->m->n->next = NULL;
+	s->m->n->x = s->m->n->y = 0;
+	s->scn = (Screen *) malloc(sizeof (Screen));
+	if (!s->scn) exit(EXIT_FAILURE);
+	s->scn->row = h;
+	s->scn->col = w;
+	s->scn->v = (uint8_t **) malloc(h * sizeof(uint8_t *));
+	if (!s->scn->v) exit (EXIT_FAILURE);
+	for (size_t i = 0; i < h; ++i) 
+	{
+		s->scn->v[i] = (uint8_t *) calloc(w, sizeof(uint8_t));
+	}	
+	return s;
 }
 
-void insert(List ** l, uint16_t x, uint16_t y)
+void set_cords (List **s, size_t x, size_t y) 
 {
-	List * n = (List *) malloc(sizeof(List));
+	Node * n = (Node *) malloc(sizeof(Node));
 	n->x = x;
 	n->y = y;
-	(*l)->n = n;
-	n->b = (*l);
-	n->n = NULL;
-	(*l) = n;
-}
-
-void 
-set_snake_size(List **l, size_t size) 
-{
-	if (!(*l)) return;
-	for (size_t i = 0; i < size; ++i)
-	{
-		(*l) = (*l)->b;
-	}
-	if ((*l)) (*l) = (*l)->b;
-	while ((*l))
-	{
-		(*l) = (*l)->b;
-		free((*l)->n);
-		
-	}
+	n->next = (*s)->n;
+	(*s)->head = n;
+	(*s)->n = n;
 }
 
 void
-output_list (List *l)
+scn (Screen *s)
 {
-	if (!l) return;
-	printf("x: %d y: %d\n", l->x, l->y);
-	output_list (l->b);
-}
-
-Matrix *
-create_matrix (uint16_t row, uint16_t col)
-{
-	Matrix *m = (Matrix *)malloc (sizeof (Matrix));
-	if (!m) exit (EXIT_FAILURE);
-	m->row = row;
-	m->col = col;
-	m->v = (uint8_t **)malloc (row * sizeof (uint8_t *));
-	for (size_t i = 0; i < row; ++i)
-	{
-		m->v[i] = (uint8_t *)calloc (col, sizeof (uint8_t));
-	}
-	return m;
-}
-
-void
-output (Matrix *m)
-{
-    for (size_t i = 0; i < m->row; ++i)
+    for (size_t i = 0; i < s->row; ++i)
         {
-            for (size_t j = 0; j < m->col; ++j)
+            for (size_t j = 0; j < s->col; ++j)
                 {
-			printf("%d", m->v[i][j]);
+			printf("%d", *(*(s->v + i) + j));
                 }
 	    puts("");
         }
 }
 
 void
-set (Matrix **m, List * l)
+set_apple(Screen **m) { (*m)->v[rand () % HEIGHT-1][rand () % WIDTH] = 2; }
+
+void
+bit_screen (Snake **s, Screen **m, Node * h)
 {
-	if (!l) return;
-	(*m)->v[l->y][l->x] = 1;
-	set (m,l->b);
+	if (!h) return;
+	if ((*m)->v[h->y][h->x] == 2) 
+	{
+		(*s)->s++;
+	//	set_apple(&(*m));
+	}
+	if ((*m)->v[h->y][h->x] == 1) exit (EXIT_FAILURE); // death
+	(*m)->v[h->y][h->x] = 1;
+	bit_screen (s, m, h->next);
+}
+
+void
+snake_size (Screen **m, Node **h, size_t s, size_t i)
+{
+	if (!(*(h))) return;
+	if (i == s) 
+	{
+		Node *aux = (*h)->next;
+		Node *tmp;
+		while (aux) 
+		{
+			(*m)->v[aux->y][aux->x] = 0;	
+			tmp = aux;
+			aux = aux->next;
+			free (tmp);
+		}
+		(*h)->next = NULL;
+		return;
+	};
+	
+	snake_size (&(*m), &(*h)->next, s, ++i);
 }
 
 int 
 main(void) 
-{
-	Matrix *m = create_matrix (HEIGHT, WIDTH);
-	List * l = create_list ();
-	size_t x = 0;
-	size_t y = 0;
-	size_t s = 0;
-	char k;
+{ 
+	srand(time(NULL));	
+	Snake *s = create (HEIGHT, WIDTH);
+	set_apple(&(s->scn));
 
 	while (1) 
 	{
-		k = getchar();
-
-		switch (k) 
+		switch (getchar()) 
 		{
-			case 'a': x = x > 0 ? --x : WIDTH; break;
-			case 's': y = y == HEIGHT ? 0 : ++y; break;
-			case 'd': x = x == WIDTH ? 0 : ++x; break;
-			case 'w': y = y > 0 ? --y : HEIGHT; break; 
-			default: break;
+			case 'a':
+				s->x = s->x == 0 ? WIDTH : s->x-1; 
+				break;
+			case 's': 
+				s->y = s->y == HEIGHT-1 ? 1 : s->y+1; 
+				break;
+			case 'd': 
+				s->x = s->x == WIDTH ? 0 : s->x+1; 
+				break;
+			case 'w': 
+				s->y = s->y == 0 ? HEIGHT-1 : s->y-1; 
+				break; 			
+			default: continue;
 		}
-		set_snake_size(&l, s);
+		getchar();
+	
 		system("clear");
-		insert (&l, x, y);
-		set (&m, l);
-		output_list (l);
-		output(m);
+		set_cords (&(s->m), s->x, s->y);
+		snake_size (&(s->scn), &(s->m->head), s->s, 0);
+		bit_screen (&s, &(s->scn), s->m->head);
+		scn (s->scn);
 	}
 
 	return 0;
