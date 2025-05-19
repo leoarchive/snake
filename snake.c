@@ -19,6 +19,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 
 #define HEIGHT 20
 #define WIDTH 100
@@ -159,39 +163,47 @@ snake_size (Screen **m, Node **h, size_t s, size_t i)
     snake_size (&(*m), &(*h)->next, s, ++i);
 }
 
-int
-main(void)
-{
+struct termios orig_termios;
+
+void disable_raw_mode() {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+}
+
+void enable_raw_mode() {
+    struct termios raw;
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    atexit(disable_raw_mode); 
+    raw = orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON); 
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+}
+
+int main(void) {
     srand(time(NULL));
-    Snake *s = create (HEIGHT, WIDTH);
-
-    while (1)
-        {
-            switch (getchar())
-                {
-                case 'a':
-                    s->x = s->x == 0 ? WIDTH : s->x-1;
-                    break;
-                case 's':
-                    s->y = s->y == HEIGHT-1 ? 0 : s->y+1;
-                    break;
-                case 'd':
-                    s->x = s->x == WIDTH ? 0 : s->x+1;
-                    break;
-                case 'w':
-                    s->y = s->y == 0 ? HEIGHT-1 : s->y-1;
-                    break;
-                default:
-                    continue;
-                }
-            getchar();
-
-            if (ate_yourself(s->m->head, s->x, s->y)) break;
-            set_cords (&(s->m), s->x, s->y);
-            snake_size (&(s->scn), &(s->m->head), s->s, 0);
-            bit_screen (&s, &(s->scn), s->m->head);
-            screen (s->scn);
+    Snake *s = create(HEIGHT, WIDTH);
+    enable_raw_mode();  
+    char dir = 'd';  
+    while (1) {
+        usleep(100000); 
+        int c = getchar();
+        if (c != EOF) {
+            if (c == 'a' || c == 's' || c == 'd' || c == 'w') {
+                dir = c;
+            }
         }
+        switch (dir) {
+            case 'a': s->x = s->x == 0 ? WIDTH - 1 : s->x - 1; break;
+            case 's': s->y = s->y == HEIGHT - 1 ? 0 : s->y + 1; break;
+            case 'd': s->x = s->x == WIDTH - 1 ? 0 : s->x + 1; break;
+            case 'w': s->y = s->y == 0 ? HEIGHT - 1 : s->y - 1; break;
+        }
+        if (ate_yourself(s->m->head, s->x, s->y)) break;
+        set_cords(&(s->m), s->x, s->y);
+        snake_size(&(s->scn), &(s->m->head), s->s, 0);
+        bit_screen(&s, &(s->scn), s->m->head);
+        screen(s->scn);
+    }
 
     return 0;
 }
